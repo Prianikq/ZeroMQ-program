@@ -1,0 +1,1 @@
+/usr/bin/c++     CMakeFiles/syncpub.dir/syncpub.cpp.o  -o syncpub  -Wl,-rpath,/usr/local/lib /usr/local/lib/libzmq.so.5.2.5 -lpthread /usr/lib/x86_64-linux-gnu/libsodium.so -lrt 

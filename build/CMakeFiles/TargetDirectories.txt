@@ -1,0 +1,4 @@
+/home/dmitry/Work_place/Work_project/build/CMakeFiles/edit_cache.dir
+/home/dmitry/Work_place/Work_project/build/CMakeFiles/syncsub.dir
+/home/dmitry/Work_place/Work_project/build/CMakeFiles/rebuild_cache.dir
+/home/dmitry/Work_place/Work_project/build/CMakeFiles/syncpub.dir

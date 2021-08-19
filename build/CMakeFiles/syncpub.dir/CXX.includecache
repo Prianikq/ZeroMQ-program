@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/dmitry/Work_place/Work_project/interface.hpp
+zmq.hpp
+-
+zmq_addon.hpp
+-
+optional
+-
+
+/home/dmitry/Work_place/Work_project/syncpub.cpp
+interface.hpp
+/home/dmitry/Work_place/Work_project/interface.hpp
+iostream
+-
+string
+-
+unistd.h
+-
+
