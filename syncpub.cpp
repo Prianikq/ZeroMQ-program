@@ -34,7 +34,7 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
     }
     
     // Создание сокета-публикатора и установление связи по адресу
-	zmq::context_t context(1); // Создание контекста (процесса, который управляет работой сокетов в рамках программы)
+    zmq::context_t context(1); // Создание контекста (процесса, который управляет работой сокетов в рамках программы)
     zmq::socket_t publisher (context, ZMQ_PUB);
     publisher.set(zmq::sockopt::sndhwm, 0); // Устанавливает неограниченное число хранимых сообщений в очереди получателя
     publisher.bind("tcp://*:" + std::to_string(n_publ_port));
@@ -43,7 +43,7 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
     zmq::socket_t syncservice (context, ZMQ_REP);
     syncservice.bind("tcp://*:" + std::to_string(n_sync_port));
     nZMQInterface::recieve_message(syncservice);
-	nZMQInterface::send_data(syncservice, ""); // Отправка пустого сообщения БСКИ как факт подтверждения получения от него предыдущего сообщения
+    nZMQInterface::send_data(syncservice, ""); // Отправка пустого сообщения БСКИ как факт подтверждения получения от него предыдущего сообщения
     
     // Установление связи с другим публикатором для гарантии того, что БСКИ успешно связался со всеми публикаторами и готов принимать их сообщения
     zmq::socket_t handshaking(context, (s_publisher_type == "НО"? ZMQ_REQ : ZMQ_REP));
@@ -58,6 +58,7 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
         nZMQInterface::recieve_message(handshaking);
         nZMQInterface::send_data(handshaking, "");
         std::cout << "[ " << s_publisher_type << ", pid = " << getpid() << " ]: Связь с " << COORDINATE_GENERATOR_NAME << " успешно установлена." << std::endl;
+        usleep(ALTITUDE_GENERATOR_WAIT_TIME);
     }
     
     //  Процесс отправки сообщений
@@ -82,13 +83,12 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
             ++l_altitude;
             usleep(ALTITUDE_GENERATOR_WAIT_TIME);
         }
-	}
+    }
 	
-	if (nZMQInterface::send_data(publisher, nZMQInterface::rData(s_publisher_type == COORDINATE_GENERATOR_NAME? nZMQInterface::eDataType::COORDINATE_END : nZMQInterface::eDataType::ALTITUDE_END)) == -1) {
-	    std::cerr << "Произошла ошибка при попытке отправки завершающего сообщения!" << std::endl;
+    if (nZMQInterface::send_data(publisher, nZMQInterface::rData(s_publisher_type == COORDINATE_GENERATOR_NAME? nZMQInterface::eDataType::COORDINATE_END : nZMQInterface::eDataType::ALTITUDE_END)) == -1) {
+        std::cerr << "Произошла ошибка при попытке отправки завершающего сообщения!" << std::endl;
         return -4;
-	}
-    
+    }
     std::cout << "[ " << s_publisher_type << ", pid = " << getpid() << " ]: Отправил все сообщения, завершаю работу. " << std::endl;	
     sleep (1);  // Дать ZeroMQ время чтобы сбросить вывод
     return 0;
