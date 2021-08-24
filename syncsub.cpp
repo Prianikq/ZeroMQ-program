@@ -6,9 +6,20 @@
 #include <iostream>
 #include <string>
 
-int main () {  
+int main (int32_t p_l_argc, const char *p_p_argv[]) {
+    const int32_t NUMBER_COMMAND_LINE_ARGUMENTS = 2; // Требуемое число аргументов в командной строке для запуска программы  
     const std::string SUBSCRIBER_NAME = "БСКИ"; // Имя потребителя
-    const int32_t SUBSCRIBER_SLEEP_TIME = 10000; // Время ожидания потребителя между получением сообщений (в микросекундах)
+    //const int32_t SUBSCRIBER_SLEEP_TIME = 10000; // Время ожидания потребителя между получением сообщений (в микросекундах)
+    
+    int32_t l_wait_time;
+    
+    if (p_l_argc != NUMBER_COMMAND_LINE_ARGUMENTS) {
+        std::cerr << "Ошибка! Произошел запуск программы производителя с некорректными аргументами командной строки!" << std::endl;
+        return -1;
+    }
+    else {
+        l_wait_time = atoi(p_p_argv[1]);
+    }
     
     zmq::context_t context(1); // Создание контекста (процесса, который управляет работой сокетов в рамках программы)
     
@@ -56,7 +67,7 @@ int main () {
                     std::cout << "[ " << SUBSCRIBER_NAME << ", pid = " << getpid() << " ]: Получил координаты X = " << data.m_l_x_coord << ", Y = " << data.m_l_y_coord << "." << std::endl;
                     break;
             }
-            usleep(SUBSCRIBER_SLEEP_TIME);
+            usleep(l_wait_time);
         }
         else { 
             std::cerr << "Произошла ошибка при попытке получения сообщения со стороны потребителя!" << std::endl;

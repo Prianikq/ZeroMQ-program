@@ -7,18 +7,20 @@
 #include <unistd.h>
 
 int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
-    const int32_t NUMBER_COMMAND_LINE_ARGUMENTS = 4; // Требуемое число аргументов в командной строке для запуска программы
+    const int32_t NUMBER_COMMAND_LINE_ARGUMENTS = 5; // Требуемое число аргументов в командной строке для запуска программы
     const std::string COORDINATE_GENERATOR_NAME = "НО"; // Имя производителя координат
     const std::string ALTITUDE_GENERATOR_NAME = "РВ"; // Имя производителя высоты
     const int32_t MAXIMUM_COORDINATE = 100; // Предельное значение координат (при его достижении прекращается отправка)
     const int32_t MAXIMUM_ALTITUDE = 100; // Предельное значение высоты
-    const int32_t COORDINATE_GENERATOR_WAIT_TIME = 40000; // Время ожидания производителя координат между отправками данных (в микросекундах)
-    const int32_t ALTITUDE_GENERATOR_WAIT_TIME = 200000; // Время ожидания производителя высоты между отправками данных (в микросекундах)
+    //const int32_t COORDINATE_GENERATOR_WAIT_TIME = 40000; // Время ожидания производителя координат между отправками данных (в микросекундах)
+    //const int32_t ALTITUDE_GENERATOR_WAIT_TIME = 200000; // Время ожидания производителя высоты между отправками данных (в микросекундах)
     const short HANDSHAKING_PORT = 5565; // Номер порта, по которому происходит "рукопожатие" между производителями перед началом публикации данных
     
     std::string s_publisher_type; // Хранит тип производителя, который задается через аргументы командной строки
     short n_sync_port; // Хранит номер порта, который используется данным производителем для установления связи-синхронизации с подписчиком
     short n_publ_port; // Хранит номер порта, который используется данным производителем для отправки данных подписчику
+    int32_t l_wait_time; // Время ожидания производителя между отправками данных (в микросекундах)
+    
     if (p_l_argc != NUMBER_COMMAND_LINE_ARGUMENTS) {
         std::cerr << "Ошибка! Произошел запуск программы производителя с некорректными аргументами командной строки!" << std::endl;
         return -1;
@@ -27,6 +29,7 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
         s_publisher_type = std::string(p_p_argv[1]);
         n_sync_port = atoi(p_p_argv[2]);
         n_publ_port = atoi(p_p_argv[3]);
+        l_wait_time = atoi(p_p_argv[4]);
         if (!(s_publisher_type == COORDINATE_GENERATOR_NAME || s_publisher_type == ALTITUDE_GENERATOR_NAME)) {
             std::cerr << "Ошибка! Указан неверный тип производителя в аргументе командной строки!" << std::endl;
             return -2;
@@ -58,7 +61,7 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
         nZMQInterface::recieve_message(handshaking);
         nZMQInterface::send_data(handshaking, "");
         std::cout << "[ " << s_publisher_type << ", pid = " << getpid() << " ]: Связь с " << COORDINATE_GENERATOR_NAME << " успешно установлена." << std::endl;
-        usleep(ALTITUDE_GENERATOR_WAIT_TIME);
+        usleep(l_wait_time);
     }
     
     //  Процесс отправки сообщений
@@ -72,7 +75,7 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
             }
             ++l_x_coord;
             ++l_y_coord;
-            usleep(COORDINATE_GENERATOR_WAIT_TIME);
+            usleep(l_wait_time);
         }
         else {
             std::cout << "[ " << s_publisher_type << ", pid = " << getpid() << " ]: Отправляю высоту H = " << l_altitude << ". " << std::endl;
@@ -81,7 +84,7 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
                 return -3;
             }
             ++l_altitude;
-            usleep(ALTITUDE_GENERATOR_WAIT_TIME);
+            usleep(l_wait_time);
         }
     }
 	
