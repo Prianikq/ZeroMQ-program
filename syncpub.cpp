@@ -4,9 +4,11 @@
 #include "interface.hpp"
 #include <iostream>
 #include <string>
-#include <unistd.h>
+#include <chrono>
+#include <thread>
 
 int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
+    using namespace std::chrono_literals;
     const int32_t NUMBER_COMMAND_LINE_ARGUMENTS = 5; // Требуемое число аргументов в командной строке для запуска программы
     const std::string COORDINATE_GENERATOR_NAME = "НО"; // Имя производителя координат
     const std::string ALTITUDE_GENERATOR_NAME = "РВ"; // Имя производителя высоты
@@ -51,7 +53,7 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
     // Установление связи с другим публикатором для гарантии того, что БСКИ успешно связался со всеми публикаторами и готов принимать их сообщения
     zmq::socket_t handshaking(context, (s_publisher_type == "НО"? ZMQ_REQ : ZMQ_REP));
     if (s_publisher_type == COORDINATE_GENERATOR_NAME) {
-        std::cout << "[ " << s_publisher_type << ", pid = " << getpid() << " ]: Начинаю связываться с " << ALTITUDE_GENERATOR_NAME << "." << std::endl;
+        std::cout << "[ " << s_publisher_type << " ]: Начинаю связываться с " << ALTITUDE_GENERATOR_NAME << "." << std::endl;
         handshaking.connect("tcp://localhost:" + std::to_string(HANDSHAKING_PORT));
         nZMQInterface::send_data(handshaking, "");
         nZMQInterface::recieve_message(handshaking);
@@ -60,31 +62,31 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
         handshaking.bind("tcp://*:" + std::to_string(HANDSHAKING_PORT));
         nZMQInterface::recieve_message(handshaking);
         nZMQInterface::send_data(handshaking, "");
-        std::cout << "[ " << s_publisher_type << ", pid = " << getpid() << " ]: Связь с " << COORDINATE_GENERATOR_NAME << " успешно установлена." << std::endl;
-        usleep(l_wait_time);
+        std::cout << "[ " << s_publisher_type << " ]: Связь с " << COORDINATE_GENERATOR_NAME << " успешно установлена." << std::endl;
+        std::this_thread::sleep_for(std::chrono::microseconds(l_wait_time));
     }
     
     //  Процесс отправки сообщений
     int32_t l_x_coord = 0, l_y_coord = 0, l_altitude = 0;
     while (l_x_coord <= MAXIMUM_COORDINATE && l_altitude <= MAXIMUM_ALTITUDE) {
         if (s_publisher_type == COORDINATE_GENERATOR_NAME) {
-            std::cout << "[ " << s_publisher_type << ", pid = " << getpid() << " ]: Отправляю координаты X = " << l_x_coord << " Y = " << l_y_coord << ". " << std::endl;	
+            std::cout << "[ " << s_publisher_type << " ]: Отправляю координаты X = " << l_x_coord << " Y = " << l_y_coord << ". " << std::endl;	
             if (nZMQInterface::send_data(publisher, nZMQInterface::rData(nZMQInterface::eDataType::COORDINATE, l_x_coord, l_y_coord)) == -1) {
                 std::cerr << "Произошла ошибка при попытке отправки сообщения!" << std::endl;
                 return -3;
             }
             ++l_x_coord;
             ++l_y_coord;
-            usleep(l_wait_time);
+            std::this_thread::sleep_for(std::chrono::microseconds(l_wait_time));
         }
         else {
-            std::cout << "[ " << s_publisher_type << ", pid = " << getpid() << " ]: Отправляю высоту H = " << l_altitude << ". " << std::endl;
+            std::cout << "[ " << s_publisher_type << " ]: Отправляю высоту H = " << l_altitude << ". " << std::endl;
             if (nZMQInterface::send_data(publisher, nZMQInterface::rData(nZMQInterface::eDataType::ALTITUDE, l_altitude)) == -1) {
                 std::cerr << "Произошла ошибка при попытке отправки сообщения!" << std::endl;
                 return -3;
             }
             ++l_altitude;
-            usleep(l_wait_time);
+            std::this_thread::sleep_for(std::chrono::microseconds(l_wait_time));
         }
     }
 	
@@ -92,7 +94,7 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
         std::cerr << "Произошла ошибка при попытке отправки завершающего сообщения!" << std::endl;
         return -4;
     }
-    std::cout << "[ " << s_publisher_type << ", pid = " << getpid() << " ]: Отправил все сообщения, завершаю работу. " << std::endl;	
-    sleep (1);  // Дать ZeroMQ время чтобы сбросить вывод
+    std::cout << "[ " << s_publisher_type << " ]: Отправил все сообщения, завершаю работу. " << std::endl;	
+    std::this_thread::sleep_for(1s);  // Дать ZeroMQ время чтобы сбросить вывод
     return 0;
 }

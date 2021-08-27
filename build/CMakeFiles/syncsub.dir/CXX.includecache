@@ -17,10 +17,12 @@ optional
 /home/dmitry/Work_place/Work_project/syncsub.cpp
 interface.hpp
 /home/dmitry/Work_place/Work_project/interface.hpp
-unistd.h
--
 iostream
 -
 string
+-
+chrono
+-
+thread
 -
 

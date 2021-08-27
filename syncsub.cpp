@@ -2,11 +2,13 @@
       Разработчик: Ляшун Д. С. */
 
 #include "interface.hpp"
-#include <unistd.h>
 #include <iostream>
 #include <string>
+#include <chrono>
+#include <thread>
 
 int main (int32_t p_l_argc, const char *p_p_argv[]) {
+    using namespace std::chrono_literals;
     const int32_t NUMBER_COMMAND_LINE_ARGUMENTS = 2; // Требуемое число аргументов в командной строке для запуска программы  
     const std::string SUBSCRIBER_NAME = "БСКИ"; // Имя потребителя
     //const int32_t SUBSCRIBER_SLEEP_TIME = 10000; // Время ожидания потребителя между получением сообщений (в микросекундах)
@@ -34,7 +36,7 @@ int main (int32_t p_l_argc, const char *p_p_argv[]) {
     zmq::socket_t sync_coord_gen(context, ZMQ_REQ);
     zmq::socket_t sync_altit_gen(context, ZMQ_REQ);
     
-    std::cout << "[ " << SUBSCRIBER_NAME << ", pid = " << getpid() << " ]: Начинаю устанавливать связь с публикаторами." << std::endl;
+    std::cout << "[ " << SUBSCRIBER_NAME << " ]: Начинаю устанавливать связь с публикаторами." << std::endl;
     sync_coord_gen.connect("tcp://localhost:5563");
     nZMQInterface::send_data(sync_coord_gen, "");
     nZMQInterface::recieve_message(sync_coord_gen);
@@ -42,7 +44,7 @@ int main (int32_t p_l_argc, const char *p_p_argv[]) {
     sync_altit_gen.connect("tcp://localhost:5564");
     nZMQInterface::send_data(sync_altit_gen, "");
     nZMQInterface::recieve_message(sync_altit_gen);
-    std::cout << "[ " << SUBSCRIBER_NAME << ", pid = " << getpid() << " ]: Связь с публикаторами успешно установлена." << std::endl;
+    std::cout << "[ " << SUBSCRIBER_NAME << " ]: Связь с публикаторами успешно установлена." << std::endl;
     
     
     //  Процесс получения данных от публикаторов
@@ -53,27 +55,27 @@ int main (int32_t p_l_argc, const char *p_p_argv[]) {
             nZMQInterface::rData data = res.value();
             switch (data.m_e_type) {
                 case nZMQInterface::eDataType::ALTITUDE_END:
-                    std::cout << "[ " << SUBSCRIBER_NAME << ", pid = " << getpid() << " ]: Получил последние данные о высоте." << std::endl;
+                    std::cout << "[ " << SUBSCRIBER_NAME << " ]: Получил последние данные о высоте." << std::endl;
                     b_last_altitude_data = true;
                     break;
                 case nZMQInterface::eDataType::COORDINATE_END:
-                    std::cout << "[ " << SUBSCRIBER_NAME << ", pid = " << getpid() << " ]: Получил последние данные о координате." << std::endl;
+                    std::cout << "[ " << SUBSCRIBER_NAME << " ]: Получил последние данные о координате." << std::endl;
                     b_last_coordinate_data = true;
                     break;
                 case nZMQInterface::eDataType::ALTITUDE:
-                    std::cout << "[ " << SUBSCRIBER_NAME << ", pid = " << getpid() << " ]: Получил высоту H = " << data.m_l_altitude << "." << std::endl;
+                    std::cout << "[ " << SUBSCRIBER_NAME << " ]: Получил высоту H = " << data.m_l_altitude << "." << std::endl;
                     break;
                 case nZMQInterface::eDataType::COORDINATE:
-                    std::cout << "[ " << SUBSCRIBER_NAME << ", pid = " << getpid() << " ]: Получил координаты X = " << data.m_l_x_coord << ", Y = " << data.m_l_y_coord << "." << std::endl;
+                    std::cout << "[ " << SUBSCRIBER_NAME << " ]: Получил координаты X = " << data.m_l_x_coord << ", Y = " << data.m_l_y_coord << "." << std::endl;
                     break;
             }
-            usleep(l_wait_time);
+            std::this_thread::sleep_for(std::chrono::microseconds(l_wait_time));
         }
         else { 
             std::cerr << "Произошла ошибка при попытке получения сообщения со стороны потребителя!" << std::endl;
             return -2;
         }
     }
-    sleep (1);  // Дать ZeroMQ время чтобы сбросить вывод
+    std::this_thread::sleep_for(1000ms);  // Дать ZeroMQ время чтобы сбросить вывод
     return 0;
 }
