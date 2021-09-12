@@ -9,17 +9,17 @@
 
 int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
     using namespace std::chrono_literals;
-    const int32_t NUMBER_COMMAND_LINE_ARGUMENTS = 5; // Требуемое число аргументов в командной строке для запуска программы
+    const int32_t NUMBER_COMMAND_LINE_ARGUMENTS = 4; // Требуемое число аргументов в командной строке для запуска программы
     const std::string COORDINATE_GENERATOR_NAME = "НО"; // Имя производителя координат
     const std::string ALTITUDE_GENERATOR_NAME = "РВ"; // Имя производителя высоты
     const int32_t MAXIMUM_COORDINATE = 100; // Предельное значение координат (при его достижении прекращается отправка)
     const int32_t MAXIMUM_ALTITUDE = 100; // Предельное значение высоты
-    //const int32_t COORDINATE_GENERATOR_WAIT_TIME = 40000; // Время ожидания производителя координат между отправками данных (в микросекундах)
-    //const int32_t ALTITUDE_GENERATOR_WAIT_TIME = 200000; // Время ожидания производителя высоты между отправками данных (в микросекундах)
-    const short HANDSHAKING_PORT = 5565; // Номер порта, по которому происходит "рукопожатие" между производителями перед началом публикации данных
+    const short SUBS_SYNC_PORT = 5565; // Номер порта, по которому производитель получает приветствие от потребителей (подтверждение их создания)
+    const short PUBS_SYNC_PORT = 5566;
+    const short SUBSCRIBERS_COUNT = 3; // Общее число потребителей
+    const short PUBLISHERS_COUNT = 2; // Общее число производителей
     
     std::string s_publisher_type; // Хранит тип производителя, который задается через аргументы командной строки
-    short n_sync_port; // Хранит номер порта, который используется данным производителем для установления связи-синхронизации с подписчиком
     short n_publ_port; // Хранит номер порта, который используется данным производителем для отправки данных подписчику
     int32_t l_wait_time; // Время ожидания производителя между отправками данных (в микросекундах)
     
@@ -29,9 +29,8 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
     }
     else {
         s_publisher_type = std::string(p_p_argv[1]);
-        n_sync_port = atoi(p_p_argv[2]);
-        n_publ_port = atoi(p_p_argv[3]);
-        l_wait_time = atoi(p_p_argv[4]);
+        n_publ_port = atoi(p_p_argv[2]);
+        l_wait_time = atoi(p_p_argv[3]);
         if (!(s_publisher_type == COORDINATE_GENERATOR_NAME || s_publisher_type == ALTITUDE_GENERATOR_NAME)) {
             std::cerr << "Ошибка! Указан неверный тип производителя в аргументе командной строки!" << std::endl;
             return -2;
@@ -41,30 +40,38 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
     // Создание сокета-публикатора и установление связи по адресу
     zmq::context_t context(1); // Создание контекста (процесса, который управляет работой сокетов в рамках программы)
     zmq::socket_t publisher (context, ZMQ_PUB);
-    publisher.set(zmq::sockopt::sndhwm, 0); // Устанавливает неограниченное число хранимых сообщений в очереди получателя
+    publisher.set(zmq::sockopt::conflate, true); // Устананавливает возможность хранения только одного сообщения в очереди отправителя
     publisher.bind("tcp://*:" + std::to_string(n_publ_port));
 
-    //  Установление связи с БСКИ
-    zmq::socket_t syncservice (context, ZMQ_REP);
-    syncservice.bind("tcp://*:" + std::to_string(n_sync_port));
-    nZMQInterface::recieve_message(syncservice);
-    nZMQInterface::send_data(syncservice, ""); // Отправка пустого сообщения БСКИ как факт подтверждения получения от него предыдущего сообщения
-    
-    // Установление связи с другим публикатором для гарантии того, что БСКИ успешно связался со всеми публикаторами и готов принимать их сообщения
-    zmq::socket_t handshaking(context, (s_publisher_type == "НО"? ZMQ_REQ : ZMQ_REP));
+    std::cout << "[ " << s_publisher_type << " ]: Начинаю устанавливать связь с потребителями. " << std::endl;
     if (s_publisher_type == COORDINATE_GENERATOR_NAME) {
-        std::cout << "[ " << s_publisher_type << " ]: Начинаю связываться с " << ALTITUDE_GENERATOR_NAME << "." << std::endl;
-        handshaking.connect("tcp://localhost:" + std::to_string(HANDSHAKING_PORT));
-        nZMQInterface::send_data(handshaking, "");
-        nZMQInterface::recieve_message(handshaking);
+        /* Получение приветствий от потребителей */
+        zmq::socket_t subs_check(context, ZMQ_REP);
+        subs_check.bind("tcp://*:" + std::to_string(SUBS_SYNC_PORT));
+        short n_count = 0;
+        while (n_count != SUBSCRIBERS_COUNT) {
+            nZMQInterface::recieve_message(subs_check);
+            nZMQInterface::send_data(subs_check, ""); // Отправка пустого сообщения БСКИ как факт подтверждения получения от него предыдущего сообщения
+            ++n_count;
+        }
+                
+        /* Рассылка сообщений остальным производителям как факт того, что все потребители готовы получать сообщения */
+        zmq::socket_t pubs_check(context, ZMQ_REP);
+        pubs_check.bind("tcp://*:" + std::to_string(PUBS_SYNC_PORT));
+        n_count = 1;
+        while (n_count != PUBLISHERS_COUNT) {
+            nZMQInterface::recieve_message(pubs_check);
+            nZMQInterface::send_data(pubs_check, "");
+            ++n_count;
+        }
     }
     else {
-        handshaking.bind("tcp://*:" + std::to_string(HANDSHAKING_PORT));
-        nZMQInterface::recieve_message(handshaking);
-        nZMQInterface::send_data(handshaking, "");
-        std::cout << "[ " << s_publisher_type << " ]: Связь с " << COORDINATE_GENERATOR_NAME << " успешно установлена." << std::endl;
-        std::this_thread::sleep_for(std::chrono::microseconds(l_wait_time));
+        zmq::socket_t pubs_check(context, ZMQ_REQ);
+        pubs_check.connect("tcp://localhost:" + std::to_string(PUBS_SYNC_PORT));
+        nZMQInterface::send_data(pubs_check, "");
+        nZMQInterface::recieve_message(pubs_check);
     }
+    std::cout << "[ " << s_publisher_type << " ]: Связь с потребителями успешно установлена. " << std::endl;
     
     //  Процесс отправки сообщений
     int32_t l_x_coord = 0, l_y_coord = 0, l_altitude = 0;

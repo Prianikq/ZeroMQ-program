@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/dmitry/Work_place/Work_project/interface.hpp
+/home/dmitry/ZeroMQ-program/interface.hpp
 zmq.hpp
 -
 zmq_addon.hpp
@@ -14,9 +14,9 @@ zmq_addon.hpp
 optional
 -
 
-/home/dmitry/Work_place/Work_project/syncpub.cpp
+/home/dmitry/ZeroMQ-program/syncpub.cpp
 interface.hpp
-/home/dmitry/Work_place/Work_project/interface.hpp
+/home/dmitry/ZeroMQ-program/interface.hpp
 iostream
 -
 string

@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/dmitry/Work_place/Work_project/syncpub.cpp" "/home/dmitry/Work_place/Work_project/build/CMakeFiles/syncpub.dir/syncpub.cpp.o"
+  "/home/dmitry/ZeroMQ-program/syncpub.cpp" "/home/dmitry/ZeroMQ-program/build/CMakeFiles/syncpub.dir/syncpub.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
