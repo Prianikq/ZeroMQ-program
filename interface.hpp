@@ -4,37 +4,49 @@
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 #include <optional>
+#include <iostream>
 
 namespace nZMQInterface {
     enum eDataType { // Представляет тип получаемых и отправляемых сообщенией
         COORDINATE = 0,
         COORDINATE_END,
         ALTITUDE,
-        ALTITUDE_END
+        ALTITUDE_END,
+        RADAR,
+        RADAR_END,
+        CONTROL
     };
 
     struct rData { // Представляет форму, по которым производители передают координаты и высоты
         int32_t m_l_x_coord;
         int32_t m_l_y_coord;
         int32_t m_l_altitude;
+        int32_t m_l_x_enemy;
+        int32_t m_l_y_enemy;
+        int32_t m_l_num;
         int32_t m_e_type;
         rData() = default;
         rData(const eDataType& p_e_type, const int32_t& p_l_x_coord, const int32_t& p_l_y_coord) {
-            m_l_x_coord = p_l_x_coord;
-            m_l_y_coord = p_l_y_coord;
-            m_l_altitude = -1;
+            if (p_e_type == RADAR) {
+                m_l_x_enemy = p_l_x_coord;
+                m_l_y_enemy = p_l_y_coord;
+            }
+            else if (p_e_type == COORDINATE) {
+                m_l_x_coord = p_l_x_coord;
+                m_l_y_coord = p_l_y_coord;
+            }
             m_e_type = p_e_type;
         }
-        rData(const eDataType& p_e_type, const int32_t& p_l_altitude) {
-            m_l_x_coord = -1;
-            m_l_y_coord = -1;
-            m_l_altitude = p_l_altitude;
+        rData(const eDataType& p_e_type, const int32_t& p_l_data) {
+            if (p_e_type == CONTROL) {
+                m_l_num = p_l_data;
+            }
+            else if (p_e_type == ALTITUDE) {
+                m_l_altitude = p_l_data;
+            }
             m_e_type = p_e_type;
         }
         rData(const eDataType& p_e_type) {
-            m_l_x_coord = -1;
-            m_l_y_coord = -1;
-            m_l_altitude = -1;
             m_e_type = p_e_type;
         }
         rData(const std::string& p_s_buffer) {
@@ -54,6 +66,9 @@ namespace nZMQInterface {
             m_l_x_coord = get_number(p_s_buffer, i);
             m_l_y_coord = get_number(p_s_buffer, i);
             m_l_altitude = get_number(p_s_buffer, i);
+            m_l_x_enemy = get_number(p_s_buffer, i);
+            m_l_y_enemy = get_number(p_s_buffer, i);
+            m_l_num = get_number(p_s_buffer, i);
         }
     };
 
@@ -80,7 +95,7 @@ namespace nZMQInterface {
     }
 
     int32_t send_data(zmq::socket_t& p_socket, const rData& p_data) { // Функция отправки p_data типа rData по сокету p_socket
-        return send_data(p_socket, std::to_string(p_data.m_e_type) + " " + std::to_string(p_data.m_l_x_coord) + " " + std::to_string(p_data.m_l_y_coord) + " " + std::to_string(p_data.m_l_altitude));
+        return send_data(p_socket, std::to_string(p_data.m_e_type) + " " + std::to_string(p_data.m_l_x_coord) + " " + std::to_string(p_data.m_l_y_coord) + " " + std::to_string(p_data.m_l_altitude) + " " + std::to_string(p_data.m_l_x_enemy) + " " + std::to_string(p_data.m_l_y_enemy) + " " + std::to_string(p_data.m_l_num));
     }
     
     std::optional<rData> recieve_data(zmq::socket_t& p_socket) { // Функция получения объекта типа rData по сокету p_socket

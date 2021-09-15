@@ -12,12 +12,15 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
     const int32_t NUMBER_COMMAND_LINE_ARGUMENTS = 4; // Требуемое число аргументов в командной строке для запуска программы
     const std::string COORDINATE_GENERATOR_NAME = "НО"; // Имя производителя координат
     const std::string ALTITUDE_GENERATOR_NAME = "РВ"; // Имя производителя высоты
-    const int32_t MAXIMUM_COORDINATE = 100; // Предельное значение координат (при его достижении прекращается отправка)
-    const int32_t MAXIMUM_ALTITUDE = 100; // Предельное значение высоты
+    const std::string RADAR_GENERATOR_NAME = "РЛС"; // Имя производителя РЛИ
+    const std::string CONTROL_GENERATOR_NAME = "ИУП"; // Имя подающего команды процесса
+    const int32_t MAXIMUM_COORDINATE = 1000; // Предельное значение координат (при его достижении прекращается отправка)
+    const int32_t MAXIMUM_ALTITUDE = 1000; // Предельное значение высоты
+    const int32_t MAXIMUM_RADAR_VALUE = 1000; // Предельное значение РЛИ
     const short SUBS_SYNC_PORT = 5565; // Номер порта, по которому производитель получает приветствие от потребителей (подтверждение их создания)
     const short PUBS_SYNC_PORT = 5566;
     const short SUBSCRIBERS_COUNT = 3; // Общее число потребителей
-    const short PUBLISHERS_COUNT = 2; // Общее число производителей
+    const short PUBLISHERS_COUNT = 6; // Общее число производителей
     
     std::string s_publisher_type; // Хранит тип производителя, который задается через аргументы командной строки
     short n_publ_port; // Хранит номер порта, который используется данным производителем для отправки данных подписчику
@@ -31,7 +34,7 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
         s_publisher_type = std::string(p_p_argv[1]);
         n_publ_port = atoi(p_p_argv[2]);
         l_wait_time = atoi(p_p_argv[3]);
-        if (!(s_publisher_type == COORDINATE_GENERATOR_NAME || s_publisher_type == ALTITUDE_GENERATOR_NAME)) {
+        if (!(s_publisher_type == COORDINATE_GENERATOR_NAME || s_publisher_type == ALTITUDE_GENERATOR_NAME || s_publisher_type == RADAR_GENERATOR_NAME || s_publisher_type == CONTROL_GENERATOR_NAME)) {
             std::cerr << "Ошибка! Указан неверный тип производителя в аргументе командной строки!" << std::endl;
             return -2;
         }
@@ -74,8 +77,8 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
     std::cout << "[ " << s_publisher_type << " ]: Связь с потребителями успешно установлена. " << std::endl;
     
     //  Процесс отправки сообщений
-    int32_t l_x_coord = 0, l_y_coord = 0, l_altitude = 0;
-    while (l_x_coord <= MAXIMUM_COORDINATE && l_altitude <= MAXIMUM_ALTITUDE) {
+    int32_t l_x_coord = 0, l_y_coord = 0, l_altitude = 0, l_x_enemy = 50, l_y_enemy = 50;
+    while (l_x_coord <= MAXIMUM_COORDINATE && l_altitude <= MAXIMUM_ALTITUDE && l_x_enemy <= MAXIMUM_RADAR_VALUE) {
         if (s_publisher_type == COORDINATE_GENERATOR_NAME) {
             std::cout << "[ " << s_publisher_type << " ]: Отправляю координаты X = " << l_x_coord << " Y = " << l_y_coord << ". " << std::endl;	
             if (nZMQInterface::send_data(publisher, nZMQInterface::rData(nZMQInterface::eDataType::COORDINATE, l_x_coord, l_y_coord)) == -1) {
@@ -86,7 +89,7 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
             ++l_y_coord;
             std::this_thread::sleep_for(std::chrono::microseconds(l_wait_time));
         }
-        else {
+        else if (s_publisher_type == ALTITUDE_GENERATOR_NAME) {
             std::cout << "[ " << s_publisher_type << " ]: Отправляю высоту H = " << l_altitude << ". " << std::endl;
             if (nZMQInterface::send_data(publisher, nZMQInterface::rData(nZMQInterface::eDataType::ALTITUDE, l_altitude)) == -1) {
                 std::cerr << "Произошла ошибка при попытке отправки сообщения!" << std::endl;
@@ -95,9 +98,37 @@ int32_t main (int32_t p_l_argc, const char *p_p_argv[]) {
             ++l_altitude;
             std::this_thread::sleep_for(std::chrono::microseconds(l_wait_time));
         }
+        else if (s_publisher_type == RADAR_GENERATOR_NAME) {
+            std::cout << "[ " << s_publisher_type << " ]: Отправляю координаты X_e = " << l_x_enemy << ", Y_e = " << l_y_enemy << ". " << std::endl;
+            if (nZMQInterface::send_data(publisher, nZMQInterface::rData(nZMQInterface::eDataType::RADAR, l_x_enemy, l_y_enemy)) == -1) {
+                std::cerr << "Произошла ошибка при попытке отправки сообщения!" << std::endl;
+                return -3;
+            }
+            ++l_x_enemy;
+            ++l_y_enemy;
+            std::this_thread::sleep_for(std::chrono::microseconds(l_wait_time));
+        }
+        else if (s_publisher_type == CONTROL_GENERATOR_NAME) {
+            std::cout << "[ " << s_publisher_type << " ]: Введите число для отправки -> ";
+            int32_t l_num;
+            std::cin >> l_num;
+            if (nZMQInterface::send_data(publisher, nZMQInterface::rData(nZMQInterface::eDataType::CONTROL, l_num)) == -1) {
+                std::cerr << "Произошла ошибка при попытке отправки сообщения!" << std::endl;
+                return -3;
+            }
+        }
     }
-	
-    if (nZMQInterface::send_data(publisher, nZMQInterface::rData(s_publisher_type == COORDINATE_GENERATOR_NAME? nZMQInterface::eDataType::COORDINATE_END : nZMQInterface::eDataType::ALTITUDE_END)) == -1) {
+    int32_t l_result = 0;
+    if (s_publisher_type == COORDINATE_GENERATOR_NAME) {
+        l_result = nZMQInterface::send_data(publisher, nZMQInterface::rData(nZMQInterface::eDataType::COORDINATE_END));
+    }
+    else if (s_publisher_type == ALTITUDE_GENERATOR_NAME) {
+        l_result = nZMQInterface::send_data(publisher, nZMQInterface::rData(nZMQInterface::eDataType::ALTITUDE_END));
+    }
+    else if (s_publisher_type == RADAR_GENERATOR_NAME) {
+        l_result = nZMQInterface::send_data(publisher, nZMQInterface::rData(nZMQInterface::eDataType::RADAR_END));
+    }
+    if (l_result == -1) {
         std::cerr << "Произошла ошибка при попытке отправки завершающего сообщения!" << std::endl;
         return -4;
     }

@@ -13,6 +13,8 @@ zmq_addon.hpp
 -
 optional
 -
+iostream
+-
 
 /home/dmitry/ZeroMQ-program/syncpub.cpp
 interface.hpp
